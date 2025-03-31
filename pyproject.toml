@@ -1,0 +1,5 @@
+# in construction
+[project]
+name = "NewtonCannonballSim"
+version = "0.1"
+dependencies = ["pygame", "math"]
