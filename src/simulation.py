@@ -1,11 +1,18 @@
 import pygame
 import math
 
+screen_res_x = 1280
+screen_res_y = 720
+
+GRAVITATIONAL_CONSTANT = 6.6743 * (10 ** -11)
+DENSITY = 5500 # Density constant for mass and gravity force calculation. Expressed in Kg/m³. Earth density is aprox. 5500 Kg/m³.
+
 # pygame setup
 pygame.init()
-screen = pygame.display.set_mode((1280, 720))
+screen = pygame.display.set_mode((screen_res_x, screen_res_y))
 clock = pygame.time.Clock()
 
+# Class Projectile
 class Projectile:
     def __init__(self, pos_x, pos_y, vel_x, vel_y, acc_x, acc_y, size, color):
         self.pos_x = pos_x
@@ -29,12 +36,35 @@ class Projectile:
         self.move(self.vel_x, self.vel_y)
         self.accel(self.acc_x, self.acc_y)
         
-    def simulate(self, center_x, center_y, gravity_module):
-        self.accel((gravity_module * ((self.pos_x - center_x) / math.sqrt((self.pos_x - center_x) ** 2 + (self.pos_y - center_y) ** 2))) * -1, (gravity_module *((self.pos_y - center_y) / math.sqrt((self.pos_x - center_x) ** 2 + (self.pos_y - center_y) ** 2))) * -1)
-        self.update()
+    def draw(self):
         pygame.draw.circle(screen, self.color, (self.pos_x, self.pos_y), self.size)
+
+class GravityBody:
+    def __init__(self, pos_x, pos_y, diameter, color):
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.diameter = diameter
+        self.color = color
+        self.mass = (DENSITY * math.pi * (diameter ** 3)) / 6 # Mass of the planet. Expressed in Kg.
+        
+    def draw(self, color):
+        pygame.draw.circle(screen, color, (self.pos_x, self.pos_y), self.diameter)
+        
+    def exerce_gravity(self, projectile: Projectile):
+        delta_x = projectile.pos_x - self.pos_x
+        delta_y = projectile.pos_y - self.pos_y
+        
+        distance_from_center_of_mass = math.sqrt(((delta_x) ** 2) + ((delta_y)**2))
+        gravity_force = (GRAVITATIONAL_CONSTANT * self.mass) / distance_from_center_of_mass * -1
+        
+        projectile.accel(gravity_force * (delta_x / distance_from_center_of_mass), gravity_force * (delta_y / distance_from_center_of_mass))
+        projectile.update()
     
-projectile = Projectile(640, 180, 0.5, 0, 0, 0, 32, "red")
+projectile = Projectile(screen_res_x / 2, (screen_res_y / 2) - (screen_res_y / 4), 0.5, 0, 0, 0, 8, "red")
+
+planet = GravityBody(screen_res_x / 2, screen_res_y / 2, 100, "blue")
+
+print(GRAVITATIONAL_CONSTANT)
 
 running = True
 while running:
@@ -49,9 +79,9 @@ while running:
 
     # RENDER YOUR GAME HERE
     
-    pygame.draw.circle(screen, "blue", (640, 360), 8)
-    
-    projectile.simulate(640, 360, 0.001)
+    planet.exerce_gravity(projectile)
+    projectile.draw()
+    planet.draw("blue")
     
     # flip() the display to put your work on screen
     pygame.display.flip()
