@@ -1,5 +1,5 @@
 # in construction
 [project]
 name = "NewtonCannonballSim"
-version = "0.1"
-dependencies = ["pygame", "math"]
+version = "0.5"
+dependencies = ["pygame", "math", "numpy"]
