@@ -4,6 +4,7 @@ import math
 import numpy as np
 
 SCREEN_RES: np.ndarray = np.array([1280, 720], dtype=np.uint16)
+ARROW_POLYGON_POINTS_ARRAY: np.ndarray = np.array([(0, 0), (-0.5, -0.5), (1, 0), (-0.5, 0.5)], dtype=np.double)
 
 GRAVITATIONAL_CONSTANT: float = 6.6743 * (10 ** -11)
 DENSITY: float = 5500 # density constant for mass and gravity force calculation, expressed in Kg/m³. Earth density is aprox. 5500 Kg/m³.
@@ -15,6 +16,30 @@ pygame.init()
 screen = pygame.display.set_mode((SCREEN_RES[0], SCREEN_RES[1]))
 SIM_FONT = pygame.freetype.SysFont(pygame.freetype.get_default_font(), 32)
 clock = pygame.time.Clock()
+
+def get_screen_pos(pos: np.ndarray, screen_center: np.ndarray, zoom: float):
+    screen_pos: np.ndarray = np.array([pos[0], -pos[1]], dtype=np.double)
+    screen_pos -= np.array([screen_center[0], -screen_center[1]])
+    screen_pos *= zoom
+    screen_pos += (SCREEN_RES / 2)
+    screen_pos = screen_pos.astype(dtype=np.int16)
+        
+    return screen_pos
+    
+       
+def draw_arrow(start_pos: np.ndarray, angle: float, modulus: float, color: tuple, screen_center: np.ndarray, zoom: float):
+    end_pos: np.ndarray = start_pos + np.array([modulus * math.cos(math.radians(angle)), modulus * math.sin(math.radians(angle))], dtype=np.double)
+    screen_pos_start: np.ndarray = get_screen_pos(start_pos, screen_center, zoom)
+    screen_pos_end: np.ndarray = get_screen_pos(end_pos, screen_center, zoom)
+    
+    arrow_points: np.ndarray = ARROW_POLYGON_POINTS_ARRAY * zoom * 8
+    rotation_matrix: np.ndarray = np.array([(math.cos(math.radians(angle)), -math.sin(math.radians(angle))), (math.sin(math.radians(angle)), math.cos(math.radians(angle)))], dtype=np.double)
+    arrow_points @= rotation_matrix
+    arrow_points += screen_pos_end
+    
+    pygame.draw.circle(screen, color, screen_pos_start, int(2 * zoom))
+    pygame.draw.line(screen, color, screen_pos_start, screen_pos_end, int(2 * zoom))
+    pygame.draw.polygon(screen, color, arrow_points)
 
 # class Projectile
 class Projectile:
@@ -35,20 +60,10 @@ class Projectile:
     def simulate(self, delta_a: np.ndarray): # accelerate and update velocity at the same time, useful when exercing gravity calculations
         self.moment += np.array([self.moment[1], delta_a])
         
-    def get_screen_pos(self,screen_center: np.ndarray, zoom: float):
-        screen_pos: np.ndarray = np.array([self.moment[0, 0], - self.moment[0, 1]], dtype=np.double)
-        screen_pos -= np.array([screen_center[0], -screen_center[1]])
-        screen_pos *= zoom
-        screen_pos += (SCREEN_RES / 2)
-        screen_pos = screen_pos.astype(dtype=np.int16)
-        
-        return screen_pos
-        
     def draw(self, screen_center: np.ndarray, zoom: float): # draws the projectile in screeen taking into account player movment and zoom
-        screen_pos: np.ndarray = self.get_screen_pos(screen_center, zoom)
+        screen_pos: np.ndarray = get_screen_pos(self.moment[0], screen_center, zoom)
     
-        if NULL_VECTOR[0] <= screen_pos[0] <= SCREEN_RES[0] and NULL_VECTOR[1] <= screen_pos[1] <= SCREEN_RES[1]: # cheks if the projectile is in the boundaries of the screen before drawing it
-            pygame.draw.circle(screen, self.color, screen_pos, self.size * zoom)
+        pygame.draw.circle(screen, self.color, screen_pos, self.size * zoom)
 
 # class GravityBody
 class GravityBody:
@@ -58,20 +73,10 @@ class GravityBody:
         self.color: tuple = color
         self.mass: float = (DENSITY * math.pi * (diameter ** 3)) / 6 # mass of the gravity body, expressed in Kg
         
-    def get_screen_pos(self,screen_center: np.ndarray, zoom: float):
-        screen_pos: np.ndarray = np.array([self.pos[0], -self.pos[1]], dtype=np.double)
-        screen_pos -= np.array([screen_center[0], -screen_center[1]])
-        screen_pos *= zoom
-        screen_pos += (SCREEN_RES / 2)
-        screen_pos = screen_pos.astype(dtype=np.int16)
-        
-        return screen_pos
-        
     def draw(self, screen_center: np.ndarray, zoom: float): # draws the gravity body in screeen taking into account player movment and zoom
-        screen_pos: np.ndarray = self.get_screen_pos(screen_center, zoom)
-        
-        if NULL_VECTOR[0] <= screen_pos[0] <= SCREEN_RES[0] and NULL_VECTOR[1] <= screen_pos[1] <= SCREEN_RES[1]: # cheks if the gravity body is in the boundaries of the screen before drawing it
-            pygame.draw.circle(screen, self.color, screen_pos, self.diameter * zoom)
+        screen_pos: np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
+    
+        pygame.draw.circle(screen, self.color, screen_pos, self.diameter * zoom)
         
     def exerce_gravity(self, projectile: Projectile): # calculates the new moment exerced on the give projectile by this gravity body
         distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)
@@ -91,29 +96,29 @@ class Cannon:
         self.firing_speed_modulus: float = firing_speed_modulus
         self.firing_speed = np.array([firing_speed_modulus * math.cos(math.radians(self.angle)), firing_speed_modulus * math.sin(math.radians(self.angle))])
         
-    def get_screen_pos(self,screen_center: np.ndarray, zoom: float):
-        screen_pos: np.ndarray = np.array([self.pos[0], -self.pos[1]], dtype=np.double)
-        screen_pos -= np.array([screen_center[0], -screen_center[1]])
-        screen_pos *= zoom
-        screen_pos += (SCREEN_RES / 2)
-        screen_pos = screen_pos.astype(dtype=np.int16)
-        
-        return screen_pos
-        
-    def draw(self, screen_center: np.ndarray, zoom: float): # draws the gravity body in screeen taking into account player movment and zoom
-        screen_pos_gravity_body: np.ndarray = self.gravity_body.get_screen_pos(screen_center, zoom)
-        screen_pos_cannon:np.ndarray = self.get_screen_pos(screen_center, zoom)
+    def draw(self, screen_center: np.ndarray, zoom: float): # draws the cannon in screeen taking into account player movment and zoom
+        screen_pos_gravity_body: np.ndarray = get_screen_pos(self.gravity_body.pos, screen_center, zoom)
+        screen_pos_cannon:np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
         TAM: float = 16
         
         cannon_sprite: pygame.Rect = pygame.Rect(screen_pos_cannon[0] - TAM, screen_pos_cannon[1] - TAM, TAM * 2, TAM * 2)
         pygame.draw.line(screen, (0, 255, 0), screen_pos_gravity_body, screen_pos_cannon, int(8 * zoom))
-        pygame.draw.rect(screen, (0, 255, 0), cannon_sprite.scale_by(zoom))
+        pygame.draw.rect(screen, (0, 255, 0), cannon_sprite.scale_by(zoom, zoom))
+        draw_arrow(self.pos, self.angle, self.firing_speed_modulus * 50, (255, 0, 255), screen_center, zoom)
+    
+        
+    def add_angle(self, angle: float):
+        self.angle += angle
+        self.firing_speed = np.array([self.firing_speed_modulus * math.cos(math.radians(self.angle)), self.firing_speed_modulus * math.sin(math.radians(self.angle))])
+        
+    def add_speed_modulus(self, speed: float):
+        self.firing_speed_modulus += speed
+        self.firing_speed = np.array([self.firing_speed_modulus * math.cos(math.radians(self.angle)), self.firing_speed_modulus * math.sin(math.radians(self.angle))])
         
     def fire(self, projectile_size: float, projectile_color: tuple):
-        self.firing_speed = np.array([self.firing_speed_modulus * math.cos(math.radians(self.angle)), self.firing_speed_modulus * math.sin(math.radians(self.angle))])
         projectile: Projectile = Projectile(np.array([self.pos[0], self.pos[1]]), np.array([self.firing_speed[0], self.firing_speed[1]]), projectile_size, projectile_color)
         return projectile
-
+    
 planet: GravityBody = GravityBody(np.array([0, 0]), 100, (0, 0, 255))
 cannon: Cannon = Cannon(np.array([0, 180]), planet, 0, 0.44)
 projectiles = []
@@ -158,16 +163,16 @@ while running:
         last_key_pressed = "-"
         
     elif key[pygame.K_UP] == True:
-        cannon.angle += 0.1
+        cannon.add_angle(0.1)
         last_key_pressed = "UP"
     elif key[pygame.K_DOWN] == True:
-        cannon.angle -= 0.1
+        cannon.add_angle(-0.1)
         last_key_pressed = "DOWN"
     elif key[pygame.K_RIGHT] == True:
-        cannon.firing_speed_modulus += 0.001
+        cannon.add_speed_modulus(0.001)
         last_key_pressed = "RIGHT"
     elif key[pygame.K_LEFT] == True:
-        cannon.firing_speed_modulus -= 0.001
+        cannon.add_speed_modulus(-0.001)
         last_key_pressed = "LEFT"
         
     # fill the screen with a color to wipe away anything from last frame
