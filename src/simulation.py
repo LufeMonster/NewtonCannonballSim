@@ -86,6 +86,13 @@ class GravityBody:
         sen_alpha: float = (projectile.moment[0, 1] - self.pos[1]) / distance_from_center_of_mass
         
         projectile.simulate(np.array([gravity_force * cos_alpha, gravity_force * sen_alpha]))
+    
+    def check_collision(self, projectile: Projectile):
+        distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)        
+        # check why visual_collision_dist doesn't work without the 7 (or a multiplier)
+        visual_collision_dist = (self.diameter/2) + projectile.size * 7 
+
+        return distance_from_center_of_mass <= visual_collision_dist
 
 # class Cannon
 class Cannon:
@@ -127,8 +134,8 @@ screen_center: np.ndarray = np.array([0, 0], dtype=np.double)
 zoom: float = 1
 
 running: bool = True
-
 last_key_pressed = "NONE"
+collision_count = 0
 
 while running:
     # poll for events
@@ -184,17 +191,21 @@ while running:
     planet.draw(screen_center, zoom)
     
     for projectile in projectiles:
-        planet.exerce_gravity(projectile)
-        projectile.draw(screen_center, zoom)
+        if planet.check_collision(projectile):
+            projectiles.remove(projectile)
+            collision_count += 1
+        else:
+            planet.exerce_gravity(projectile)
+            projectile.draw(screen_center, zoom)
         
     angle_display_txt = "Angle: {angle:.2f}°"
     velocity_display_txt = "Velocity: {speed: .2f} m/s"
+    collision_display_txt = "Collisions: {count}"
     
     SIM_FONT.render_to(screen, (0, 0), angle_display_txt.format(angle = cannon.angle), (255, 255, 255))
     SIM_FONT.render_to(screen, (0, 32), velocity_display_txt.format(speed = cannon.firing_speed_modulus), (255, 255, 255))
-    
     SIM_FONT.render_to(screen, (0, 64), "Last key pressed: " + last_key_pressed, (255, 255, 255))
-    
+    SIM_FONT.render_to(screen, (0, 96), collision_display_txt.format(count = collision_count), (255, 255, 255))
     
     # flip() the display to put your work on screen
     pygame.display.flip()
