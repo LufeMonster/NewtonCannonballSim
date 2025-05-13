@@ -13,8 +13,6 @@ UNIT_VECTOR: np.ndarray = np.array([1, 1], dtype=np.uint8)
 
 # pygame setup
 pygame.init()
-screen = pygame.display.set_mode((SCREEN_RES[0], SCREEN_RES[1]))
-SIM_FONT = pygame.freetype.SysFont(pygame.freetype.get_default_font(), 32)
 clock = pygame.time.Clock()
 
 def get_screen_pos(pos: np.ndarray, screen_center: np.ndarray, zoom: float):
@@ -118,6 +116,18 @@ class Cannon:
     def fire(self, projectile_size: float, projectile_color: tuple):
         projectile: Projectile = Projectile(np.array([self.pos[0], self.pos[1]]), np.array([self.firing_speed[0], self.firing_speed[1]]), projectile_size, projectile_color)
         return projectile
+
+# class Screen
+class Screen:
+    def __init__(self, resolution: np.ndarray, font_size: int, background_color: tuple): # font: pygame.freetype.Font
+        self.resolution: np.ndarray = resolution
+        #self.font: pygame.freetype.Font = font
+        self.backgound_color: tuple = background_color
+        self.window = pygame.display.set_mode(resolution)
+        self.text = pygame.freetype.SysFont(pygame.freetype.get_default_font(), font_size)
+        
+    def controls():
+        
     
 planet: GravityBody = GravityBody(np.array([0, 0]), 100, (0, 0, 255))
 cannon: Cannon = Cannon(np.array([0, 180]), planet, 0, 0.44)
