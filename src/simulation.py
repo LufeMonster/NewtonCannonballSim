@@ -75,6 +75,10 @@ class GravityBody:
         screen_pos: np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
     
         pygame.draw.circle(screen, self.color, screen_pos, self.diameter * zoom)
+    
+    def add_diameter(self, diameter:float):
+        self.diameter += diameter
+        self.mass: float = (DENSITY * math.pi * (diameter ** 3)) / 6
         
     def exerce_gravity(self, projectile: Projectile): # calculates the new moment exerced on the give projectile by this gravity body
         distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)
@@ -103,8 +107,10 @@ class Cannon:
         pygame.draw.line(screen, (0, 255, 0), screen_pos_gravity_body, screen_pos_cannon, int(8 * zoom))
         pygame.draw.rect(screen, (0, 255, 0), cannon_sprite.scale_by(zoom, zoom))
         draw_arrow(self.pos, self.angle, self.firing_speed_modulus * 50, (255, 0, 255), screen_center, zoom)
-    
         
+    def add_height(self, height: float):
+        self.pos += np.array([0, height], dtype=np.double)
+    
     def add_angle(self, angle: float):
         self.angle += angle
         self.firing_speed = np.array([self.firing_speed_modulus * math.cos(math.radians(self.angle)), self.firing_speed_modulus * math.sin(math.radians(self.angle))])
@@ -126,7 +132,59 @@ class Screen:
         self.window = pygame.display.set_mode(resolution)
         self.text = pygame.freetype.SysFont(pygame.freetype.get_default_font(), font_size)
         
-    def controls():
+    def controls(self, controlling):
+        key = pygame.key.get_pressed()
+        #last_key_pressed: str
+        match controlling:
+            case "screen_pos":
+                if key[pygame.K_UP] == True:
+                    screen_center[1] += (1 / zoom)
+                    last_key_pressed = "UP"
+                elif key[pygame.K_RIGHT] == True:
+                    screen_center[0] += (1 / zoom)
+                    last_key_pressed = "RIGHT"
+                elif key[pygame.K_DOWN] == True:
+                    screen_center[1] -= (1 / zoom)
+                    last_key_pressed = "DOWN"
+                elif key[pygame.K_LEFT] == True:
+                    screen_center[0] -= (1 / zoom)
+                    last_key_pressed = "LEFT"
+                elif key[pygame.K_KP_PLUS] == True:
+                    zoom += 0.01
+                    last_key_pressed = "+"
+                elif key[pygame.K_KP_MINUS] == True:
+                    zoom -= 0.01
+                    last_key_pressed = "-"
+                    
+            case "planet":
+                if key[pygame.K_KP_PLUS] == True:
+                    planet.add_diameter(1.0)
+                    last_key_pressed = "+"
+                elif key[pygame.K_KP_MINUS] == True:
+                    planet.add_diameter(-1.0)
+                    last_key_pressed = "-"
+        
+            case "cannon":
+                if key[pygame.K_UP] == True:
+                    cannon.add_height(0.5)
+                    last_key_pressed = "UP"
+                elif key[pygame.K_DOWN] == True:
+                    cannon.add_height(0.5)
+                    last_key_pressed = "DOWN"
+                elif key[pygame.K_UP] == True:
+                    cannon.add_angle(0.1)
+                    last_key_pressed = "UP"
+                elif key[pygame.K_DOWN] == True:
+                    cannon.add_angle(-0.1)
+                    last_key_pressed = "DOWN"
+                elif key[pygame.K_KP_PLUS] == True:
+                    cannon.add_speed_modulus(0.001)
+                    last_key_pressed = "+"
+                elif key[pygame.K_KP_MINUS] == True:
+                    cannon.add_speed_modulus(-0.001)
+                    last_key_pressed = "-"
+                    
+        return last_key_pressed
         
     
 planet: GravityBody = GravityBody(np.array([0, 0]), 100, (0, 0, 255))
@@ -140,7 +198,7 @@ running: bool = True
 
 last_key_pressed = "NONE"
 
-while running:
+while running: 
     # poll for events
     # pygame.QUIT event means the user clicked X to close your window
     for event in pygame.event.get():
@@ -151,40 +209,6 @@ while running:
                 projectiles.append(cannon.fire(8, (255, 0, 0)))
                 last_key_pressed = "SPACE"
     
-    
-    key = pygame.key.get_pressed()
-    if key[pygame.K_w] == True:
-        screen_center[1] += (1 / zoom)
-        last_key_pressed = "w"
-    elif key[pygame.K_d] == True:
-        screen_center[0] += (1 / zoom)
-        last_key_pressed = "d"
-    elif key[pygame.K_s] == True:
-        screen_center[1] -= (1 / zoom)
-        last_key_pressed = "s"
-    elif key[pygame.K_a] == True:
-        screen_center[0] -= (1 / zoom)
-        last_key_pressed = "a"
-    elif key[pygame.K_KP_PLUS] == True:
-        zoom += 0.01
-        last_key_pressed = "+"
-    elif key[pygame.K_KP_MINUS] == True:
-        zoom -= 0.01
-        last_key_pressed = "-"
-        
-    elif key[pygame.K_UP] == True:
-        cannon.add_angle(0.1)
-        last_key_pressed = "UP"
-    elif key[pygame.K_DOWN] == True:
-        cannon.add_angle(-0.1)
-        last_key_pressed = "DOWN"
-    elif key[pygame.K_RIGHT] == True:
-        cannon.add_speed_modulus(0.001)
-        last_key_pressed = "RIGHT"
-    elif key[pygame.K_LEFT] == True:
-        cannon.add_speed_modulus(-0.001)
-        last_key_pressed = "LEFT"
-        
     # fill the screen with a color to wipe away anything from last frame
     screen.fill("black")
 
