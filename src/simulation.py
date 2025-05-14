@@ -124,7 +124,7 @@ cannon: Cannon = Cannon(np.array([0, 1088]), planet, 0, 0.44)
 projectiles = []
 
 screen_center: np.ndarray = np.array([0, 0], dtype=np.double)
-zoom: float = 1
+zoom: float = 0.2
 
 running: bool = True
 
@@ -156,10 +156,10 @@ while running:
         screen_center[0] -= (1 / zoom)
         last_key_pressed = "a"
     elif key[pygame.K_KP_PLUS] == True:
-        zoom += 0.01
+        zoom += 0.002
         last_key_pressed = "+"
     elif key[pygame.K_KP_MINUS] == True:
-        zoom -= 0.01
+        zoom -= 0.002
         last_key_pressed = "-"
         
     elif key[pygame.K_UP] == True:
