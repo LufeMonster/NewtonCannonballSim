@@ -64,7 +64,7 @@ class Projectile:
         screen_pos: np.ndarray = get_screen_pos(self.moment[0], screen_center, zoom)
     
         pygame.draw.circle(screen, self.color, screen_pos, self.size * zoom)
-
+    
 # class GravityBody
 class GravityBody:
     def __init__(self, pos: np.ndarray, diameter: float, color: tuple):
@@ -76,7 +76,7 @@ class GravityBody:
     def draw(self, screen_center: np.ndarray, zoom: float): # draws the gravity body in screeen taking into account player movment and zoom
         screen_pos: np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
     
-        pygame.draw.circle(screen, self.color, screen_pos, self.diameter * zoom)
+        pygame.draw.circle(screen, self.color, screen_pos, self.diameter/2 * zoom)
         
     def exerce_gravity(self, projectile: Projectile): # calculates the new moment exerced on the give projectile by this gravity body
         distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)
@@ -86,6 +86,11 @@ class GravityBody:
         sen_alpha: float = (projectile.moment[0, 1] - self.pos[1]) / distance_from_center_of_mass
         
         projectile.simulate(np.array([gravity_force * cos_alpha, gravity_force * sen_alpha]))
+    
+    def check_collision(self, projectile: Projectile):
+        distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)
+        return distance_from_center_of_mass <= self.diameter/2 + projectile.size
+       
 
 # class Cannon
 class Cannon:
@@ -105,7 +110,6 @@ class Cannon:
         pygame.draw.line(screen, (0, 255, 0), screen_pos_gravity_body, screen_pos_cannon, int(8 * zoom))
         pygame.draw.rect(screen, (0, 255, 0), cannon_sprite.scale_by(zoom, zoom))
         draw_arrow(self.pos, self.angle, self.firing_speed_modulus * 50, (255, 0, 255), screen_center, zoom)
-    
         
     def add_angle(self, angle: float):
         self.angle += angle
@@ -118,17 +122,28 @@ class Cannon:
     def fire(self, projectile_size: float, projectile_color: tuple):
         projectile: Projectile = Projectile(np.array([self.pos[0], self.pos[1]]), np.array([self.firing_speed[0], self.firing_speed[1]]), projectile_size, projectile_color)
         return projectile
+
+class Explosion:
+    def __init__(self, pos: np.ndarray, size: float): # pos is the position of the projectile
+        self.pos: np.ndarray = pos
+        self.color = (255,255,0)
+        self.size = size
     
-planet: GravityBody = GravityBody(np.array([0, 0]), 1024, (0, 0, 255))
+    def draw(self, screen_center: np.ndarray, zoom: float): 
+        screen_pos: np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
+        pygame.draw.circle(screen, self.color, screen_pos, self.size * zoom)
+
+planet: GravityBody = GravityBody(np.array([0, 0]), 2048, (0, 0, 255))
 cannon: Cannon = Cannon(np.array([0, 1088]), planet, 0, 0.44)
 projectiles = []
+explosions = []
 
 screen_center: np.ndarray = np.array([0, 0], dtype=np.double)
 zoom: float = 0.2
 
 running: bool = True
-
 last_key_pressed = "NONE"
+collision_count = 0
 
 while running:
     # poll for events
@@ -140,7 +155,6 @@ while running:
             if event.key == pygame.K_SPACE:
                 projectiles.append(cannon.fire(8, (255, 0, 0)))
                 last_key_pressed = "SPACE"
-    
     
     key = pygame.key.get_pressed()
     if key[pygame.K_w] == True:
@@ -187,14 +201,22 @@ while running:
         planet.exerce_gravity(projectile)
         projectile.draw(screen_center, zoom)
         
+        if planet.check_collision(projectile):
+            explosions.append(Explosion(projectile.moment[0], projectile.size))
+            projectiles.remove(projectile)
+            collision_count += 1
+
+    for explosion in explosions:
+        explosion.draw(screen_center, zoom)
+        
     angle_display_txt = "Angle: {angle:.2f}°"
     velocity_display_txt = "Velocity: {speed: .2f} m/s"
+    collision_display_txt = "Collisions: {count}"
     
     SIM_FONT.render_to(screen, (0, 0), angle_display_txt.format(angle = cannon.angle), (255, 255, 255))
     SIM_FONT.render_to(screen, (0, 32), velocity_display_txt.format(speed = cannon.firing_speed_modulus), (255, 255, 255))
-    
     SIM_FONT.render_to(screen, (0, 64), "Last key pressed: " + last_key_pressed, (255, 255, 255))
-    
+    SIM_FONT.render_to(screen, (0, 96), collision_display_txt.format(count = collision_count), (255, 255, 255))
     
     # flip() the display to put your work on screen
     pygame.display.flip()
