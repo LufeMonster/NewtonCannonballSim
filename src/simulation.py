@@ -80,7 +80,7 @@ class GravityBody:
         
     def exerce_gravity(self, projectile: Projectile): # calculates the new moment exerced on the give projectile by this gravity body
         distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)
-        gravity_force: np.double = -(GRAVITATIONAL_CONSTANT * self.mass) / distance_from_center_of_mass # signal of gravity_force is inverted to pull the projectille down instead of up
+        gravity_force: np.double = -(GRAVITATIONAL_CONSTANT * self.mass) / distance_from_center_of_mass ** 2 # signal of gravity_force is inverted to pull the projectille down instead of up
         
         cos_alpha: float = (projectile.moment[0, 0] - self.pos[0]) / distance_from_center_of_mass
         sen_alpha: float = (projectile.moment[0, 1] - self.pos[1]) / distance_from_center_of_mass
@@ -126,12 +126,12 @@ class Cannon:
         projectile: Projectile = Projectile(np.array([self.pos[0], self.pos[1]]), np.array([self.firing_speed[0], self.firing_speed[1]]), projectile_size, projectile_color)
         return projectile
     
-planet: GravityBody = GravityBody(np.array([0, 0]), 100, (0, 0, 255))
-cannon: Cannon = Cannon(np.array([0, 180]), planet, 0, 0.44)
+planet: GravityBody = GravityBody(np.array([0, 0]), 1024, (0, 0, 255))
+cannon: Cannon = Cannon(np.array([0, 1088]), planet, 0, 0.44)
 projectiles = []
 
 screen_center: np.ndarray = np.array([0, 0], dtype=np.double)
-zoom: float = 1
+zoom: float = 0.2
 
 running: bool = True
 last_key_pressed = "NONE"
@@ -163,10 +163,10 @@ while running:
         screen_center[0] -= (1 / zoom)
         last_key_pressed = "a"
     elif key[pygame.K_KP_PLUS] == True:
-        zoom += 0.01
+        zoom += 0.002
         last_key_pressed = "+"
     elif key[pygame.K_KP_MINUS] == True:
-        zoom -= 0.01
+        zoom -= 0.002
         last_key_pressed = "-"
         
     elif key[pygame.K_UP] == True:
