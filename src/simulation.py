@@ -64,7 +64,7 @@ class Projectile:
         screen_pos: np.ndarray = get_screen_pos(self.moment[0], screen_center, zoom)
     
         pygame.draw.circle(screen, self.color, screen_pos, self.size * zoom)
-
+    
 # class GravityBody
 class GravityBody:
     def __init__(self, pos: np.ndarray, diameter: float, color: tuple):
@@ -76,7 +76,7 @@ class GravityBody:
     def draw(self, screen_center: np.ndarray, zoom: float): # draws the gravity body in screeen taking into account player movment and zoom
         screen_pos: np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
     
-        pygame.draw.circle(screen, self.color, screen_pos, self.diameter * zoom)
+        pygame.draw.circle(screen, self.color, screen_pos, self.diameter/2 * zoom)
         
     def exerce_gravity(self, projectile: Projectile): # calculates the new moment exerced on the give projectile by this gravity body
         distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)
@@ -88,11 +88,9 @@ class GravityBody:
         projectile.simulate(np.array([gravity_force * cos_alpha, gravity_force * sen_alpha]))
     
     def check_collision(self, projectile: Projectile):
-        distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)        
-        # check why visual_collision_dist doesn't work without the 7 (or a multiplier)
-        visual_collision_dist = (self.diameter/2) + projectile.size * 7 
-
-        return distance_from_center_of_mass <= visual_collision_dist
+        distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)
+        return distance_from_center_of_mass <= self.diameter/2 + projectile.size
+       
 
 # class Cannon
 class Cannon:
@@ -112,7 +110,6 @@ class Cannon:
         pygame.draw.line(screen, (0, 255, 0), screen_pos_gravity_body, screen_pos_cannon, int(8 * zoom))
         pygame.draw.rect(screen, (0, 255, 0), cannon_sprite.scale_by(zoom, zoom))
         draw_arrow(self.pos, self.angle, self.firing_speed_modulus * 50, (255, 0, 255), screen_center, zoom)
-    
         
     def add_angle(self, angle: float):
         self.angle += angle
@@ -126,7 +123,7 @@ class Cannon:
         projectile: Projectile = Projectile(np.array([self.pos[0], self.pos[1]]), np.array([self.firing_speed[0], self.firing_speed[1]]), projectile_size, projectile_color)
         return projectile
     
-planet: GravityBody = GravityBody(np.array([0, 0]), 1024, (0, 0, 255))
+planet: GravityBody = GravityBody(np.array([0, 0]), 2048, (0, 0, 255))
 cannon: Cannon = Cannon(np.array([0, 1088]), planet, 0, 0.44)
 projectiles = []
 
@@ -191,12 +188,12 @@ while running:
     planet.draw(screen_center, zoom)
     
     for projectile in projectiles:
+        planet.exerce_gravity(projectile)
+        projectile.draw(screen_center, zoom)
+        
         if planet.check_collision(projectile):
             projectiles.remove(projectile)
             collision_count += 1
-        else:
-            planet.exerce_gravity(projectile)
-            projectile.draw(screen_center, zoom)
         
     angle_display_txt = "Angle: {angle:.2f}°"
     velocity_display_txt = "Velocity: {speed: .2f} m/s"
