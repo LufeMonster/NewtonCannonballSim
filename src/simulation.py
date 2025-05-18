@@ -26,7 +26,6 @@ def get_screen_pos(pos: np.ndarray, screen_center: np.ndarray, zoom: float):
         
     return screen_pos
     
-       
 def draw_arrow(start_pos: np.ndarray, angle: float, modulus: float, color: tuple, screen_center: np.ndarray, zoom: float):
     end_pos: np.ndarray = start_pos + np.array([modulus * math.cos(math.radians(angle)), modulus * math.sin(math.radians(angle))], dtype=np.double)
     screen_pos_start: np.ndarray = get_screen_pos(start_pos, screen_center, zoom)
@@ -89,7 +88,7 @@ class GravityBody:
     
     def check_collision(self, projectile: Projectile):
         distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)
-        return distance_from_center_of_mass <= self.diameter/2 + projectile.size
+        return distance_from_center_of_mass <= self.diameter/2
        
 
 # class Cannon
@@ -126,12 +125,35 @@ class Cannon:
 class Explosion:
     def __init__(self, pos: np.ndarray, size: float): # pos is the position of the projectile
         self.pos: np.ndarray = pos
-        self.color = (255,255,0)
+        self.initial_size = size
         self.size = size
+        self.iterations = 0
+        self.max_iterations = 20
     
     def draw(self, screen_center: np.ndarray, zoom: float): 
         screen_pos: np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
-        pygame.draw.circle(screen, self.color, screen_pos, self.size * zoom)
+        progress = self.iterations / self.max_iterations
+
+        if progress < 0.3: # yellow (255, 255, 0) to orange (255, 128, 0)
+            g: int = 255 - int(255 * progress * 2)
+        else: # orange to red (255, 0, 0)
+            g: int = 128 - int(128 * (progress - 0.5) * 2)
+        r: int = 255
+        b: int = 0
+        color: tuple = (r, g, b)
+
+        pygame.draw.circle(screen, color, screen_pos, self.size * zoom)
+    
+    def update(self):
+        self.iterations += 1
+        
+        # explosion becomes bigger (first 10 iterations)
+        if self.iterations <= 10:
+            self.size = self.initial_size * 4 * (self.iterations / 10)
+        else: # explosion becomes smaller
+            self.size = self.initial_size * 4 * (self.max_iterations - self.iterations) / 10
+
+        return self.iterations < self.max_iterations
 
 planet: GravityBody = GravityBody(np.array([0, 0]), 2048, (0, 0, 255))
 cannon: Cannon = Cannon(np.array([0, 1088]), planet, 0, 0.44)
@@ -194,6 +216,11 @@ while running:
 
     # RENDER YOUR GAME HERE
     
+    for explosion in explosions:
+        if explosion.update():
+            explosions.remove(explosion)
+        explosion.draw(screen_center, zoom)
+
     cannon.draw(screen_center, zoom)
     planet.draw(screen_center, zoom)
     
@@ -202,12 +229,9 @@ while running:
         projectile.draw(screen_center, zoom)
         
         if planet.check_collision(projectile):
-            explosions.append(Explosion(projectile.moment[0], projectile.size))
+            explosions.append(Explosion(projectile.moment[0], projectile.size * 2))
             projectiles.remove(projectile)
             collision_count += 1
-
-    for explosion in explosions:
-        explosion.draw(screen_center, zoom)
         
     angle_display_txt = "Angle: {angle:.2f}°"
     velocity_display_txt = "Velocity: {speed: .2f} m/s"
