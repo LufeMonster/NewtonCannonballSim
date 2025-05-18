@@ -153,7 +153,7 @@ class Explosion:
         else: # explosion becomes smaller
             self.size = self.initial_size * 4 * (self.max_iterations - self.iterations) / 10
 
-        return self.iterations < self.max_iterations
+        return self.iterations >= self.max_iterations
 
 planet: GravityBody = GravityBody(np.array([0, 0]), 2048, (0, 0, 255))
 cannon: Cannon = Cannon(np.array([0, 1088]), planet, 0, 0.44)
@@ -229,7 +229,7 @@ while running:
         projectile.draw(screen_center, zoom)
         
         if planet.check_collision(projectile):
-            explosions.append(Explosion(projectile.moment[0], projectile.size * 2))
+            explosions.append(Explosion(projectile.moment[0], 16))
             projectiles.remove(projectile)
             collision_count += 1
         
