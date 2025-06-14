@@ -65,7 +65,7 @@ class Projectile:
         pygame.draw.circle(screen, self.color, screen_pos, self.size * zoom)
     
 # class GravityBody
-class GravityBody(pygame.sprite.Sprite):
+class GravityBody():
     def __init__(self, pos: np.ndarray, diameter: float, color: tuple):
         super().__init__()
         self.original_image = pygame.image.load("planet_earth.png").convert_alpha()
@@ -85,8 +85,6 @@ class GravityBody(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=screen_pos)
         
         screen.blit(self.image, self.rect)
-
-        # pygame.draw.circle(screen, self.color, screen_pos, self.diameter/2 * zoom)
         
     def exerce_gravity(self, projectile: Projectile): # calculates the new moment exerced on the give projectile by this gravity body
         distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)
