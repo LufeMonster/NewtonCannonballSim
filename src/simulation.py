@@ -171,13 +171,12 @@ class Screen:
         self.projectiles = projectiles
         self.screen_center: np.ndarray = np.array(screen_center, dtype=np.double)
         self.zoom: float = zoom
+        self.font_size: int = font_size
         self.collision_count: int = 0
         self.window = pygame.display.set_mode(resolution)
         self.text = pygame.freetype.SysFont(pygame.freetype.get_default_font(), font_size)
         
     def controls(self, controlling, key, last_key_pressed):
-        #key = pygame.key.get_pressed()
-        #last_key_pressed: str
         match controlling:
             case "screen_pos":
                 if key[pygame.K_UP] == True:
@@ -256,18 +255,18 @@ class Screen:
         collision_display_txt = "Collisions: {count}"
         
         self.text.render_to(self.window, (0, 0), angle_display_txt.format(angle = self.cannon.angle), (255, 255, 255))
-        self.text.render_to(self.window, (0, 32), velocity_display_txt.format(speed = self.cannon.firing_speed_modulus), (255, 255, 255))
-        self.text.render_to(self.window, (0, 64), collision_display_txt.format(count = self.collision_count), (255, 255, 255))
+        self.text.render_to(self.window, (0, self.font_size), velocity_display_txt.format(speed = self.cannon.firing_speed_modulus), (255, 255, 255))
+        self.text.render_to(self.window, (0, self.font_size * 2), collision_display_txt.format(count = self.collision_count), (255, 255, 255))
     
-        self.text.render_to(self.window, (0, 96), "Last key pressed: " + last_key_pressed, (255, 255, 255))
-        self.text.render_to(self.window, (0, 128), "Controling: " + controlling, (255, 255, 255))
+        self.text.render_to(self.window, (0, self.font_size * 3), "Last key pressed: " + last_key_pressed, (255, 255, 255))
+        self.text.render_to(self.window, (0, self.font_size * 4), "Controling: " + controlling, (255, 255, 255))
     
 planet: GravityBody = GravityBody(np.array([0, 0]), 1024, (0, 0, 255))
 cannon: Cannon = Cannon(64, planet, 0, 0.44)
 projectiles = []
 explosions = []
 
-screen: Screen = Screen(SCREEN_RES, 32, (0, 0, 0), planet, cannon, projectiles, np.array([0, 0], dtype=np.double), 0.2)
+screen: Screen = Screen(SCREEN_RES, 16, (0, 0, 0), planet, cannon, projectiles, np.array([0, 0], dtype=np.double), 0.5)
 
 last_key_pressed = "NONE"
 controlling = "screen_pos"
