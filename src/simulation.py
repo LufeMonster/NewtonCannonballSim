@@ -127,7 +127,6 @@ class Cannon:
 class Screen:
     def __init__(self, resolution: np.ndarray, font_size: int, background_color: tuple, planet: GravityBody, cannon: Cannon, projectiles, screen_center: np.ndarray, zoom: float): # font: pygame.freetype.Font
         self.resolution: np.ndarray = resolution
-        #self.font: pygame.freetype.Font = font
         self.backgound_color: tuple = background_color
         self.planet: GravityBody = planet
         self.cannon: Cannon = cannon
