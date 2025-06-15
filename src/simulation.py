@@ -109,16 +109,26 @@ class Cannon:
         self.firing_speed_modulus: float = firing_speed_modulus
         self.firing_speed = np.array([firing_speed_modulus * math.cos(math.radians(self.angle)), firing_speed_modulus * math.sin(math.radians(self.angle))])
         
-    def draw(self, screen_center: np.ndarray, zoom: float): # draws the cannon in screeen taking into account player movment and zoom
-        screen_pos_gravity_body: np.ndarray = get_screen_pos(self.gravity_body.pos, screen_center, zoom)
-        screen_pos_cannon:np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
-        TAM: float = 16
-        
-        cannon_sprite: pygame.Rect = pygame.Rect(screen_pos_cannon[0] - TAM, screen_pos_cannon[1] - TAM, TAM * 2, TAM * 2)
-        pygame.draw.line(screen, (0, 255, 0), screen_pos_gravity_body, screen_pos_cannon, int(8 * zoom))
-        pygame.draw.rect(screen, (0, 255, 0), cannon_sprite.scale_by(zoom, zoom))
+    def draw(self, screen_center: np.ndarray, zoom: float): # draws the cannon in screeen taking into account player movement and zoom
+        TAM = 20
+        screen_pos_base: np.ndarray = get_screen_pos(self.pos - [0, 64], screen_center, zoom)
+        direction: np.array = np.array([math.cos(math.radians(self.angle)), -math.sin(math.radians(self.angle))])
+        screen_pos_cannon_tip = self.pos + direction * TAM
+        screen_pos_cannon: np.ndarray = get_screen_pos(screen_pos_cannon_tip, screen_center, zoom)    
+
+        pygame.draw.circle(screen, (128, 128, 128), screen_pos_base, 20 * zoom)
+        pygame.draw.line(screen, (128, 128, 128), screen_pos_base, screen_pos_cannon, int(20 * zoom))
         draw_arrow(self.pos, self.angle, self.firing_speed_modulus * 50, (255, 0, 255), screen_center, zoom)
-        
+
+        # test_pos_cannon: np.ndarray = get_screen_pos([0, 1024], screen_center, zoom)
+        # TAM: float = 10
+        # cannon_sprite: pygame.Rect = pygame.Rect(screen_pos_cannon[0] - TAM, screen_pos_cannon[1] - TAM, TAM * 2, TAM * 2)
+
+        # pygame.draw.line(screen, (128, 128, 128), screen_pos_gravity_body, screen_pos_cannon, int(8 * zoom))
+        # pygame.draw.rect(screen, (128, 128, 128), cannon_sprite.scale_by(zoom, zoom))
+        # draw_arrow(self.pos, self.angle, self.firing_speed_modulus * 50, (255, 0, 255), screen_center, zoom)
+
+
     def add_angle(self, angle: float):
         self.angle += angle
         self.firing_speed = np.array([self.firing_speed_modulus * math.cos(math.radians(self.angle)), self.firing_speed_modulus * math.sin(math.radians(self.angle))])
