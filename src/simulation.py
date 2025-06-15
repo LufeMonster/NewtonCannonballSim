@@ -25,7 +25,7 @@ def get_screen_pos(pos: np.ndarray, screen_center: np.ndarray, zoom: float):
     return screen_pos
     
        
-def draw_arrow(start_pos: np.ndarray, angle: float, modulus: float, color: tuple, screen_center: np.ndarray, zoom: float):
+def draw_arrow(window, start_pos: np.ndarray, angle: float, modulus: float, color: tuple, screen_center: np.ndarray, zoom: float):
     end_pos: np.ndarray = start_pos + np.array([modulus * math.cos(math.radians(angle)), modulus * math.sin(math.radians(angle))], dtype=np.double)
     screen_pos_start: np.ndarray = get_screen_pos(start_pos, screen_center, zoom)
     screen_pos_end: np.ndarray = get_screen_pos(end_pos, screen_center, zoom)
@@ -35,9 +35,9 @@ def draw_arrow(start_pos: np.ndarray, angle: float, modulus: float, color: tuple
     arrow_points @= rotation_matrix
     arrow_points += screen_pos_end
     
-    pygame.draw.circle(screen, color, screen_pos_start, int(2 * zoom))
-    pygame.draw.line(screen, color, screen_pos_start, screen_pos_end, int(2 * zoom))
-    pygame.draw.polygon(screen, color, arrow_points)
+    pygame.draw.circle(window, color, screen_pos_start, int(2 * zoom))
+    pygame.draw.line(window, color, screen_pos_start, screen_pos_end, int(2 * zoom))
+    pygame.draw.polygon(window, color, arrow_points)
 
 # class Projectile
 class Projectile:
@@ -58,10 +58,10 @@ class Projectile:
     def simulate(self, delta_a: np.ndarray): # accelerate and update velocity at the same time, useful when exercing gravity calculations
         self.moment += np.array([self.moment[1], delta_a])
         
-    def draw(self, screen_center: np.ndarray, zoom: float): # draws the projectile in screeen taking into account player movment and zoom
+    def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the projectile in screeen taking into account player movment and zoom
         screen_pos: np.ndarray = get_screen_pos(self.moment[0], screen_center, zoom)
     
-        pygame.draw.circle(screen, self.color, screen_pos, self.size * zoom)
+        pygame.draw.circle(window, self.color, screen_pos, self.size * zoom)
 
 # class GravityBody
 class GravityBody:
@@ -71,18 +71,18 @@ class GravityBody:
         self.color: tuple = color
         self.mass: float = (DENSITY * math.pi * (diameter ** 3)) / 6 # mass of the gravity body, expressed in Kg
         
-    def draw(self, screen_center: np.ndarray, zoom: float): # draws the gravity body in screeen taking into account player movment and zoom
+    def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the gravity body in screeen taking into account player movment and zoom
         screen_pos: np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
     
-        pygame.draw.circle(screen, self.color, screen_pos, self.diameter * zoom)
+        pygame.draw.circle(window, self.color, screen_pos, self.diameter/2 * zoom)
     
     def add_diameter(self, diameter:float):
         self.diameter += diameter
-        self.mass: float = (DENSITY * math.pi * (diameter ** 3)) / 6
+        self.mass: float = (DENSITY * math.pi * (self.diameter ** 3)) / 6
         
     def exerce_gravity(self, projectile: Projectile): # calculates the new moment exerced on the give projectile by this gravity body
         distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)
-        gravity_force: np.double = -(GRAVITATIONAL_CONSTANT * self.mass) / distance_from_center_of_mass # signal of gravity_force is inverted to pull the projectille down instead of up
+        gravity_force: np.double = -(GRAVITATIONAL_CONSTANT * self.mass) / distance_from_center_of_mass ** 2 # signal of gravity_force is inverted to pull the projectille down instead of up
         
         cos_alpha: float = (projectile.moment[0, 0] - self.pos[0]) / distance_from_center_of_mass
         sen_alpha: float = (projectile.moment[0, 1] - self.pos[1]) / distance_from_center_of_mass
@@ -91,25 +91,25 @@ class GravityBody:
 
 # class Cannon
 class Cannon:
-    def __init__(self, pos: np.ndarray, gravity_body: GravityBody, angle: float, firing_speed_modulus: float):
-        self.pos: np.ndarray = pos + gravity_body.pos
+    def __init__(self, height: int, gravity_body: GravityBody, angle: float, firing_speed_modulus: float):
+        self.pos: np.ndarray = gravity_body.pos + np.array([0, height], dtype=np.int16) + np.array([0, gravity_body.diameter / 2], dtype=np.int16)
         self.gravity_body: GravityBody = gravity_body
         self.angle: float = angle
         self.firing_speed_modulus: float = firing_speed_modulus
         self.firing_speed = np.array([firing_speed_modulus * math.cos(math.radians(self.angle)), firing_speed_modulus * math.sin(math.radians(self.angle))])
         
-    def draw(self, screen_center: np.ndarray, zoom: float): # draws the cannon in screeen taking into account player movment and zoom
+    def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the cannon in screeen taking into account player movment and zoom
         screen_pos_gravity_body: np.ndarray = get_screen_pos(self.gravity_body.pos, screen_center, zoom)
         screen_pos_cannon:np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
         TAM: float = 16
         
         cannon_sprite: pygame.Rect = pygame.Rect(screen_pos_cannon[0] - TAM, screen_pos_cannon[1] - TAM, TAM * 2, TAM * 2)
-        pygame.draw.line(screen, (0, 255, 0), screen_pos_gravity_body, screen_pos_cannon, int(8 * zoom))
-        pygame.draw.rect(screen, (0, 255, 0), cannon_sprite.scale_by(zoom, zoom))
-        draw_arrow(self.pos, self.angle, self.firing_speed_modulus * 50, (255, 0, 255), screen_center, zoom)
+        pygame.draw.line(window, (0, 255, 0), screen_pos_gravity_body, screen_pos_cannon, int(8 * zoom))
+        pygame.draw.rect(window, (0, 255, 0), cannon_sprite.scale_by(zoom, zoom))
+        draw_arrow(window, self.pos, self.angle, self.firing_speed_modulus * 50, (255, 0, 255), screen_center, zoom)
         
     def add_height(self, height: float):
-        self.pos += np.array([0, height], dtype=np.double)
+        self.pos += np.array([0, height], dtype=np.int16)
     
     def add_angle(self, angle: float):
         self.angle += angle
@@ -125,78 +125,105 @@ class Cannon:
 
 # class Screen
 class Screen:
-    def __init__(self, resolution: np.ndarray, font_size: int, background_color: tuple): # font: pygame.freetype.Font
+    def __init__(self, resolution: np.ndarray, font_size: int, background_color: tuple, planet: GravityBody, cannon: Cannon, projectiles, screen_center: np.ndarray, zoom: float): # font: pygame.freetype.Font
         self.resolution: np.ndarray = resolution
         #self.font: pygame.freetype.Font = font
         self.backgound_color: tuple = background_color
+        self.planet: GravityBody = planet
+        self.cannon: Cannon = cannon
+        self.projectiles = projectiles
+        self.screen_center: np.ndarray = np.array(screen_center, dtype=np.double)
+        self.zoom: float = zoom
         self.window = pygame.display.set_mode(resolution)
         self.text = pygame.freetype.SysFont(pygame.freetype.get_default_font(), font_size)
         
-    def controls(self, controlling):
-        key = pygame.key.get_pressed()
+    def controls(self, controlling, key, last_key_pressed):
+        #key = pygame.key.get_pressed()
         #last_key_pressed: str
         match controlling:
             case "screen_pos":
                 if key[pygame.K_UP] == True:
-                    screen_center[1] += (1 / zoom)
+                    self.screen_center[1] += (1 / self.zoom)
                     last_key_pressed = "UP"
                 elif key[pygame.K_RIGHT] == True:
-                    screen_center[0] += (1 / zoom)
+                    self.screen_center[0] += (1 / self.zoom)
                     last_key_pressed = "RIGHT"
                 elif key[pygame.K_DOWN] == True:
-                    screen_center[1] -= (1 / zoom)
+                    self.screen_center[1] -= (1 / self.zoom)
                     last_key_pressed = "DOWN"
                 elif key[pygame.K_LEFT] == True:
-                    screen_center[0] -= (1 / zoom)
+                    self.screen_center[0] -= (1 / self.zoom)
                     last_key_pressed = "LEFT"
                 elif key[pygame.K_KP_PLUS] == True:
-                    zoom += 0.01
+                    self.zoom += 0.01
                     last_key_pressed = "+"
                 elif key[pygame.K_KP_MINUS] == True:
-                    zoom -= 0.01
+                    self.zoom -= 0.01
                     last_key_pressed = "-"
                     
             case "planet":
                 if key[pygame.K_KP_PLUS] == True:
-                    planet.add_diameter(1.0)
+                    self.planet.add_diameter(1.0)
                     last_key_pressed = "+"
                 elif key[pygame.K_KP_MINUS] == True:
-                    planet.add_diameter(-1.0)
+                    self.planet.add_diameter(-1.0)
                     last_key_pressed = "-"
         
             case "cannon":
                 if key[pygame.K_UP] == True:
-                    cannon.add_height(0.5)
+                    self.cannon.add_height(1)
                     last_key_pressed = "UP"
                 elif key[pygame.K_DOWN] == True:
-                    cannon.add_height(0.5)
+                    self.cannon.add_height(-1)
                     last_key_pressed = "DOWN"
-                elif key[pygame.K_UP] == True:
-                    cannon.add_angle(0.1)
-                    last_key_pressed = "UP"
-                elif key[pygame.K_DOWN] == True:
-                    cannon.add_angle(-0.1)
-                    last_key_pressed = "DOWN"
+                elif key[pygame.K_RIGHT] == True:
+                    self.cannon.add_angle(0.1)
+                    last_key_pressed = "RIGHT"
+                elif key[pygame.K_LEFT] == True:
+                    self.cannon.add_angle(-0.1)
+                    last_key_pressed = "LEFT"
                 elif key[pygame.K_KP_PLUS] == True:
-                    cannon.add_speed_modulus(0.001)
+                    self.cannon.add_speed_modulus(0.001)
                     last_key_pressed = "+"
                 elif key[pygame.K_KP_MINUS] == True:
-                    cannon.add_speed_modulus(-0.001)
+                    self.cannon.add_speed_modulus(-0.001)
                     last_key_pressed = "-"
                     
         return last_key_pressed
-        
     
-planet: GravityBody = GravityBody(np.array([0, 0]), 100, (0, 0, 255))
-cannon: Cannon = Cannon(np.array([0, 180]), planet, 0, 0.44)
+    def simulate(self):
+        for projectile in projectiles:
+            planet.exerce_gravity(projectile)
+        
+    def draw(self, last_key_pressed: str, controlling: str):
+        self.window.fill(self.backgound_color) # fill the screen with a color to wipe away anything from last frame
+        
+        cannon.draw(self.window, self.screen_center, self.zoom)
+        planet.draw(self.window, self.screen_center, self.zoom)
+        for projectile in projectiles:
+            planet.exerce_gravity(projectile)
+            projectile.draw(self.window, self.screen_center, self.zoom)
+        
+        angle_display_txt = "Angle: {angle:.2f}°"
+        velocity_display_txt = "Velocity: {speed: .2f} m/s"
+    
+        self.text.render_to(self.window, (0, 0), angle_display_txt.format(angle = self.cannon.angle), (255, 255, 255))
+        self.text.render_to(self.window, (0, 32), velocity_display_txt.format(speed = self.cannon.firing_speed_modulus), (255, 255, 255))
+    
+        self.text.render_to(self.window, (0, 64), "Last key pressed: " + last_key_pressed, (255, 255, 255))
+        self.text.render_to(self.window, (0, 96), "Controling: " + controlling, (255, 255, 255))
+    
+    
+planet: GravityBody = GravityBody(np.array([0, 0]), 1024, (0, 0, 255))
+cannon: Cannon = Cannon(64, planet, 0, 0.44)
 projectiles = []
 
-screen_center: np.ndarray = np.array([0, 0], dtype=np.double)
-zoom: float = 1
+screen: Screen = Screen(SCREEN_RES, 32, (0, 0, 0), planet, cannon, projectiles, np.array([0, 0], dtype=np.double), 1)
 
 running: bool = True
 
 last_key_pressed = "NONE"
+controlling = "screen_pos"
 
 while running: 
     # poll for events
@@ -209,27 +236,24 @@ while running:
                 projectiles.append(cannon.fire(8, (255, 0, 0)))
                 last_key_pressed = "SPACE"
     
-    # fill the screen with a color to wipe away anything from last frame
-    screen.fill("black")
-
     # RENDER YOUR GAME HERE
     
-    cannon.draw(screen_center, zoom)
-    planet.draw(screen_center, zoom)
+    key = pygame.key.get_pressed()
+    if key[pygame.K_KP1] == True:
+        controlling = "screen_pos"
+        last_key_pressed = "1"
+    elif key[pygame.K_KP2] == True:
+        controlling = "planet"
+        last_key_pressed = "2"
+    elif key[pygame.K_KP3] == True:
+        controlling = "cannon"
+        last_key_pressed = "3"
+    else: 
+        screen.controls(controlling, key, last_key_pressed)
     
-    for projectile in projectiles:
-        planet.exerce_gravity(projectile)
-        projectile.draw(screen_center, zoom)
-        
-    angle_display_txt = "Angle: {angle:.2f}°"
-    velocity_display_txt = "Velocity: {speed: .2f} m/s"
-    
-    SIM_FONT.render_to(screen, (0, 0), angle_display_txt.format(angle = cannon.angle), (255, 255, 255))
-    SIM_FONT.render_to(screen, (0, 32), velocity_display_txt.format(speed = cannon.firing_speed_modulus), (255, 255, 255))
-    
-    SIM_FONT.render_to(screen, (0, 64), "Last key pressed: " + last_key_pressed, (255, 255, 255))
-    
-    
+    screen.simulate()
+    screen.draw(last_key_pressed, controlling)
+  
     # flip() the display to put your work on screen
     pygame.display.flip()
 
