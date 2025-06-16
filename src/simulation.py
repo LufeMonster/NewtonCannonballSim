@@ -22,13 +22,13 @@ def get_screen_pos(pos: np.ndarray, screen_center: np.ndarray, zoom: float):
     screen_pos += (SCREEN_RES / 2)
     screen_pos = screen_pos.astype(dtype=np.int16)
         
-    return screen_pos
+    return tuple(screen_pos)
     
        
 def draw_arrow(window, start_pos: np.ndarray, angle: float, modulus: float, color: tuple, screen_center: np.ndarray, zoom: float):
     end_pos: np.ndarray = start_pos + np.array([modulus * math.cos(math.radians(angle)), modulus * math.sin(math.radians(angle))], dtype=np.double)
-    screen_pos_start: np.ndarray = get_screen_pos(start_pos, screen_center, zoom)
-    screen_pos_end: np.ndarray = get_screen_pos(end_pos, screen_center, zoom)
+    screen_pos_start: tuple = get_screen_pos(start_pos, screen_center, zoom)
+    screen_pos_end: tuple = get_screen_pos(end_pos, screen_center, zoom)
     
     arrow_points: np.ndarray = ARROW_POLYGON_POINTS_ARRAY * zoom * 8
     rotation_matrix: np.ndarray = np.array([(math.cos(math.radians(angle)), -math.sin(math.radians(angle))), (math.sin(math.radians(angle)), math.cos(math.radians(angle)))], dtype=np.double)
@@ -37,7 +37,7 @@ def draw_arrow(window, start_pos: np.ndarray, angle: float, modulus: float, colo
     
     pygame.draw.circle(window, color, screen_pos_start, int(2 * zoom))
     pygame.draw.line(window, color, screen_pos_start, screen_pos_end, int(2 * zoom))
-    pygame.draw.polygon(window, color, arrow_points)
+    pygame.draw.polygon(window, color, tuple(arrow_points))
 
 # class Projectile
 class Projectile:
@@ -59,7 +59,7 @@ class Projectile:
         self.moment += np.array([self.moment[1], delta_a])
         
     def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the projectile in screeen taking into account player movment and zoom
-        screen_pos: np.ndarray = get_screen_pos(self.moment[0], screen_center, zoom)
+        screen_pos: tuple = get_screen_pos(self.moment[0], screen_center, zoom)
     
         pygame.draw.circle(window, self.color, screen_pos, self.size * zoom)
 
@@ -72,7 +72,7 @@ class GravityBody:
         self.mass: float = (DENSITY * math.pi * (diameter ** 3)) / 6 # mass of the gravity body, expressed in Kg
         
     def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the gravity body in screeen taking into account player movment and zoom
-        screen_pos: np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
+        screen_pos: tuple = get_screen_pos(self.pos, screen_center, zoom)
     
         pygame.draw.circle(window, self.color, screen_pos, self.diameter/2 * zoom)
     
@@ -105,8 +105,8 @@ class Cannon:
         self.firing_speed = np.array([firing_speed_modulus * math.cos(math.radians(self.angle)), firing_speed_modulus * math.sin(math.radians(self.angle))])
         
     def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the cannon in screeen taking into account player movment and zoom
-        screen_pos_gravity_body: np.ndarray = get_screen_pos(self.gravity_body.pos, screen_center, zoom)
-        screen_pos_cannon:np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
+        screen_pos_gravity_body: tuple = get_screen_pos(self.gravity_body.pos, screen_center, zoom)
+        screen_pos_cannon: tuple = get_screen_pos(self.pos, screen_center, zoom)
         TAM: float = 16
         
         cannon_sprite: pygame.Rect = pygame.Rect(screen_pos_cannon[0] - TAM, screen_pos_cannon[1] - TAM, TAM * 2, TAM * 2)
@@ -142,7 +142,7 @@ class Explosion:
         self.max_iterations = 20
     
     def draw(self, window, screen_center: np.ndarray, zoom: float): 
-        screen_pos: np.ndarray = get_screen_pos(self.pos, screen_center, zoom)
+        screen_pos: tuple = get_screen_pos(self.pos, screen_center, zoom)
         progress = self.iterations / self.max_iterations
 
         if progress < 0.3: # yellow (255, 255, 0) to orange (255, 128, 0)
@@ -168,8 +168,9 @@ class Explosion:
 
 # class Screen
 class Screen:
-    def __init__(self, resolution: np.ndarray, font_size: int, background_color: tuple, planet: GravityBody, cannon: Cannon, projectiles, screen_center: np.ndarray, zoom: float): # font: pygame.freetype.Font
+    def __init__(self, resolution: np.ndarray, font_size: int, text_color: tuple, background_color: tuple, planet: GravityBody, cannon: Cannon, projectiles, screen_center: np.ndarray, zoom: float): # font: pygame.freetype.Font
         self.resolution: np.ndarray = resolution
+        self.text_color: tuple = text_color
         self.backgound_color: tuple = background_color
         self.planet: GravityBody = planet
         self.cannon: Cannon = cannon
@@ -178,7 +179,7 @@ class Screen:
         self.zoom: float = zoom
         self.font_size: int = font_size
         self.collision_count: int = 0
-        self.window = pygame.display.set_mode(resolution)
+        self.window = pygame.display.set_mode(tuple(resolution))
         self.text = pygame.freetype.SysFont(pygame.freetype.get_default_font(), font_size)
         
     def controls(self, controlling, key, last_key_pressed):
@@ -246,6 +247,7 @@ class Screen:
     def draw(self, last_key_pressed: str, controlling: str):
         self.window.fill(self.backgound_color) # fill the screen with a color to wipe away anything from last frame
         
+        
         for explosion in explosions:
             if explosion.update():
                 explosions.remove(explosion)
@@ -262,75 +264,78 @@ class Screen:
         down_corner: int = self.resolution[1] - 4
         right_corner: int = self.resolution[0] - self.font_size * 14
         
-        self.text.render_to(self.window, (4, 4), "Cannon info.:", (255, 255, 255))
-        self.text.render_to(self.window, (4, 4 + self.font_size), cannon_display_txt.format(angle = self.cannon.angle, speed = self.cannon.firing_speed_modulus, height = self.cannon.height), (255, 255, 255))
-        self.text.render_to(self.window, (4, 4 + self.font_size * 2), "Other info.:", (255, 255, 255))
-        self.text.render_to(self.window, (4, 4 + self.font_size * 3), other_display_txt.format(count = self.collision_count, diameter = self.planet.diameter), (255, 255, 255))
+        self.text.render_to(self.window, (4, 4), "Cannon info.:", self.text_color)
+        self.text.render_to(self.window, (4, 4 + self.font_size), cannon_display_txt.format(angle = self.cannon.angle, speed = self.cannon.firing_speed_modulus, height = self.cannon.height), self.text_color)
+        self.text.render_to(self.window, (4, 4 + self.font_size * 2), "Other info.:", self.text_color)
+        self.text.render_to(self.window, (4, 4 + self.font_size * 3), other_display_txt.format(count = self.collision_count, diameter = self.planet.diameter), self.text_color)
     
-        self.text.render_to(self.window, (4, down_corner - self.font_size * 2), "Last key pressed: " + last_key_pressed, (255, 255, 255))
-        self.text.render_to(self.window, (4, down_corner - self.font_size), "Controling: " + controlling, (255, 255, 255))
+        self.text.render_to(self.window, (4, down_corner - self.font_size * 2), "Last key pressed: " + last_key_pressed, self.text_color)
+        self.text.render_to(self.window, (4, down_corner - self.font_size), "Controling: " + controlling, self.text_color)
         
         match controlling:
             case "screen_pos":
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 4), "Arrow keys for movement", (255, 255, 255))
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 3), "and keypad plus or minus", (255, 255, 255))
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 2), "for zoom. Keypad 1, 2 or 3", (255, 255, 255))
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size), "to change controling mode.", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 4), "Arrow keys for movement", self.text_color)
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 3), "and keypad plus or minus", self.text_color)
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 2), "for zoom. Keypad 1, 2 or 3", self.text_color)
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size), "to change controling mode.", self.text_color)
             case "planet":
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 4), "Keypad plus or minus for", (255, 255, 255))
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 3), "changing the diameter of", (255, 255, 255))
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 2), "the planet. Keypad 1, 2 or 3", (255, 255, 255))
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size), "to change controling mode.", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 4), "Keypad plus or minus for", self.text_color)
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 3), "changing the diameter of", self.text_color)
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 2), "the planet. Keypad 1, 2 or 3", self.text_color)
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size), "to change controling mode.", self.text_color)
             case "cannon":
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 4), "Up and down for controling", (255, 255, 255))
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 3), "height, left and right for the", (255, 255, 255))
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 2), "angle and keypad plus or", (255, 255, 255))
-                self.text.render_to(self.window, (right_corner, down_corner - self.font_size), "minus to change the velocity.", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 4), "Up and down for controling", self.text_color)
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 3), "height, left and right for the", self.text_color)
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 2), "angle and keypad plus or", self.text_color)
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size), "minus to change the velocity.", self.text_color)
     
 planet: GravityBody = GravityBody(np.array([0, 0]), 1024, (0, 0, 255))
 cannon: Cannon = Cannon(64, planet, 0, 0.44)
 projectiles = []
 explosions = []
 
-screen: Screen = Screen(SCREEN_RES, 16, (0, 0, 0), planet, cannon, projectiles, np.array([0, 0], dtype=np.double), 0.5)
+screen: Screen = Screen(SCREEN_RES, 20, (230, 190, 255), (0, 0, 0), planet, cannon, projectiles, np.array([0, 0], dtype=np.double), 0.5)
 
-last_key_pressed = "NONE"
-controlling = "screen_pos"
+def main():
+    last_key_pressed = "NONE"
+    controlling = "screen_pos"
 
-running: bool = True
-
-while running: 
-    # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                projectiles.append(cannon.fire(8, (255, 0, 0)))
-                last_key_pressed = "SPACE"
+    running: bool = True
+    while running: 
+        # poll for events
+        # pygame.QUIT event means the user clicked X to close your window
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    projectiles.append(cannon.fire(8, (255, 0, 0)))
+                    last_key_pressed = "SPACE"
     
-    # RENDER YOUR GAME HERE
+        # RENDER YOUR GAME HERE
     
-    key = pygame.key.get_pressed()
-    if key[pygame.K_KP1] == True:
-        controlling = "screen_pos"
-        last_key_pressed = "1"
-    elif key[pygame.K_KP2] == True:
-        controlling = "planet"
-        last_key_pressed = "2"
-    elif key[pygame.K_KP3] == True:
-        controlling = "cannon"
-        last_key_pressed = "3"
-    else: 
-        screen.controls(controlling, key, last_key_pressed)
+        key = pygame.key.get_pressed()
+        if key[pygame.K_KP1] == True:
+            controlling = "screen_pos"
+            last_key_pressed = "1"
+        elif key[pygame.K_KP2] == True:
+            controlling = "planet"
+            last_key_pressed = "2"
+        elif key[pygame.K_KP3] == True:
+            controlling = "cannon"
+            last_key_pressed = "3"
+        else: 
+            screen.controls(controlling, key, last_key_pressed)
     
-    screen.simulate()
-    screen.draw(last_key_pressed, controlling)
+        screen.simulate()
+        screen.draw(last_key_pressed, controlling)
   
-    # flip() the display to put your work on screen
-    pygame.display.flip()
+        # flip() the display to put your work on screen
+        pygame.display.flip()
 
-    clock.tick(240)  # limits FPS to 240
+        clock.tick(240)  # limits FPS to 240
 
-pygame.quit()
+    pygame.quit()
+
+if __name__ == '__main__':
+    main()
