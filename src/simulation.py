@@ -96,8 +96,9 @@ class GravityBody:
 
 # class Cannon
 class Cannon:
-    def __init__(self, height: int, gravity_body: GravityBody, angle: float, firing_speed_modulus: float):
-        self.pos: np.ndarray = gravity_body.pos + np.array([0, height], dtype=np.int16) + np.array([0, gravity_body.diameter / 2], dtype=np.int16)
+    def __init__(self, height: float, gravity_body: GravityBody, angle: float, firing_speed_modulus: float):
+        self.height: float = height
+        self.pos: np.ndarray = gravity_body.pos + np.array([0, height], dtype=np.double) + np.array([0, gravity_body.diameter / 2], dtype=np.double)
         self.gravity_body: GravityBody = gravity_body
         self.angle: float = angle
         self.firing_speed_modulus: float = firing_speed_modulus
@@ -114,7 +115,8 @@ class Cannon:
         draw_arrow(window, self.pos, self.angle, self.firing_speed_modulus * 50, (255, 0, 255), screen_center, zoom)
         
     def add_height(self, height: float):
-        self.pos += np.array([0, height], dtype=np.int16)
+        self.height += height
+        self.pos += np.array([0, height], dtype=np.double)
     
     def add_angle(self, angle: float):
         self.angle += angle
@@ -201,17 +203,19 @@ class Screen:
             case "planet":
                 if key[pygame.K_KP_PLUS] == True:
                     self.planet.add_diameter(1.0)
+                    self.cannon.add_height(0.5)
                     last_key_pressed = "+"
                 elif key[pygame.K_KP_MINUS] == True:
                     self.planet.add_diameter(-1.0)
+                    self.cannon.add_height(-0.5)
                     last_key_pressed = "-"
         
             case "cannon":
                 if key[pygame.K_UP] == True:
-                    self.cannon.add_height(1)
+                    self.cannon.add_height(0.5)
                     last_key_pressed = "UP"
                 elif key[pygame.K_DOWN] == True:
-                    self.cannon.add_height(-1)
+                    self.cannon.add_height(-0.5)
                     last_key_pressed = "DOWN"
                 elif key[pygame.K_RIGHT] == True:
                     self.cannon.add_angle(0.1)
@@ -253,13 +257,32 @@ class Screen:
         angle_display_txt = "Angle: {angle:.2f}°"
         velocity_display_txt = "Velocity: {speed: .2f} m/s"
         collision_display_txt = "Collisions: {count}"
+        down_corner: int = self.resolution[1] - 4
+        right_corner: int = self.resolution[0] - self.font_size * 14
         
-        self.text.render_to(self.window, (0, 0), angle_display_txt.format(angle = self.cannon.angle), (255, 255, 255))
-        self.text.render_to(self.window, (0, self.font_size), velocity_display_txt.format(speed = self.cannon.firing_speed_modulus), (255, 255, 255))
-        self.text.render_to(self.window, (0, self.font_size * 2), collision_display_txt.format(count = self.collision_count), (255, 255, 255))
+        self.text.render_to(self.window, (4, 4), angle_display_txt.format(angle = self.cannon.angle), (255, 255, 255))
+        self.text.render_to(self.window, (4, 4 + self.font_size), velocity_display_txt.format(speed = self.cannon.firing_speed_modulus), (255, 255, 255))
+        self.text.render_to(self.window, (4, 4 + self.font_size * 2), collision_display_txt.format(count = self.collision_count), (255, 255, 255))
     
-        self.text.render_to(self.window, (0, self.font_size * 3), "Last key pressed: " + last_key_pressed, (255, 255, 255))
-        self.text.render_to(self.window, (0, self.font_size * 4), "Controling: " + controlling, (255, 255, 255))
+        self.text.render_to(self.window, (4, down_corner - self.font_size * 2), "Last key pressed: " + last_key_pressed, (255, 255, 255))
+        self.text.render_to(self.window, (4, down_corner - self.font_size), "Controling: " + controlling, (255, 255, 255))
+        
+        match controlling:
+            case "screen_pos":
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 4), "Arrow keys for movement", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 3), "and keypad plus or minus", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 2), "for zoom. Keypad 1, 2 or 3", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size), "to change controling mode.", (255, 255, 255))
+            case "planet":
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 4), "Keypad plus or minus for", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 3), "changing the diameter of", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 2), "the planet. Keypad 1, 2 or 3", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size), "to change controling mode.", (255, 255, 255))
+            case "cannon":
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 4), "Up and down for controling", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 3), "height, left and right for the", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size * 2), "angle and keypad plus or", (255, 255, 255))
+                self.text.render_to(self.window, (right_corner, down_corner - self.font_size), "minus to change the velocity.", (255, 255, 255))
     
 planet: GravityBody = GravityBody(np.array([0, 0]), 1024, (0, 0, 255))
 cannon: Cannon = Cannon(64, planet, 0, 0.44)
