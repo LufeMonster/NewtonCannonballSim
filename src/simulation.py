@@ -290,7 +290,7 @@ class Screen:
                 self.text.render_to(self.window, (right_corner, down_corner - self.font_size), "minus to change the velocity.", self.text_color)
     
 planet: GravityBody = GravityBody(np.array([0, 0]), 1024, (0, 0, 255))
-cannon: Cannon = Cannon(64, planet, 0, 0.44)
+cannon: Cannon = Cannon(64, planet, 0, 0.61)
 projectiles = []
 explosions = []
 
