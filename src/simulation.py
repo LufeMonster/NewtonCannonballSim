@@ -116,7 +116,10 @@ class Cannon:
         
     def add_height(self, height: float):
         self.height += height
-        self.pos += np.array([0, height], dtype=np.double)
+        self.update_height()
+    
+    def update_height(self):
+        self.pos: np.ndarray = self.gravity_body.pos + np.array([0, self.height], dtype=np.double) + np.array([0, self.gravity_body.diameter / 2], dtype=np.double)
     
     def add_angle(self, angle: float):
         self.angle += angle
@@ -203,11 +206,11 @@ class Screen:
             case "planet":
                 if key[pygame.K_KP_PLUS] == True:
                     self.planet.add_diameter(1.0)
-                    self.cannon.add_height(0.5)
+                    self.cannon.update_height()
                     last_key_pressed = "+"
                 elif key[pygame.K_KP_MINUS] == True:
                     self.planet.add_diameter(-1.0)
-                    self.cannon.add_height(-0.5)
+                    self.cannon.update_height()
                     last_key_pressed = "-"
         
             case "cannon":
@@ -254,15 +257,15 @@ class Screen:
             planet.exerce_gravity(projectile)
             projectile.draw(self.window, self.screen_center, self.zoom)
         
-        angle_display_txt = "Angle: {angle:.2f}°"
-        velocity_display_txt = "Velocity: {speed: .2f} m/s"
-        collision_display_txt = "Collisions: {count}"
+        cannon_display_txt = "angle: {angle:.2f}°, vel.: {speed:.2f} m/s, height: {height:.2f} m."
+        other_display_txt = "collisions: {count}, planet diameter {diameter:.1f} m."
         down_corner: int = self.resolution[1] - 4
         right_corner: int = self.resolution[0] - self.font_size * 14
         
-        self.text.render_to(self.window, (4, 4), angle_display_txt.format(angle = self.cannon.angle), (255, 255, 255))
-        self.text.render_to(self.window, (4, 4 + self.font_size), velocity_display_txt.format(speed = self.cannon.firing_speed_modulus), (255, 255, 255))
-        self.text.render_to(self.window, (4, 4 + self.font_size * 2), collision_display_txt.format(count = self.collision_count), (255, 255, 255))
+        self.text.render_to(self.window, (4, 4), "Cannon info.:", (255, 255, 255))
+        self.text.render_to(self.window, (4, 4 + self.font_size), cannon_display_txt.format(angle = self.cannon.angle, speed = self.cannon.firing_speed_modulus, height = self.cannon.height), (255, 255, 255))
+        self.text.render_to(self.window, (4, 4 + self.font_size * 2), "Other info.:", (255, 255, 255))
+        self.text.render_to(self.window, (4, 4 + self.font_size * 3), other_display_txt.format(count = self.collision_count, diameter = self.planet.diameter), (255, 255, 255))
     
         self.text.render_to(self.window, (4, down_corner - self.font_size * 2), "Last key pressed: " + last_key_pressed, (255, 255, 255))
         self.text.render_to(self.window, (4, down_corner - self.font_size), "Controling: " + controlling, (255, 255, 255))
