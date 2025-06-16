@@ -247,7 +247,6 @@ class Screen:
     def draw(self, last_key_pressed: str, controlling: str):
         self.window.fill(self.backgound_color) # fill the screen with a color to wipe away anything from last frame
         
-        
         for explosion in explosions:
             if explosion.update():
                 explosions.remove(explosion)
