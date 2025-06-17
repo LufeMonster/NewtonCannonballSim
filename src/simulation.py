@@ -43,7 +43,7 @@ def draw_arrow(window, pos_base: np.ndarray, pos_tip: np.ndarray, angle: float, 
     cannon_points += screen_pos_base
     arrow_points += screen_pos_end
 
-    pygame.draw.polygon(window, (128, 128, 128), cannon_points)
+    pygame.draw.polygon(window, (128, 128, 128), tuple(cannon_points))
     pygame.draw.circle(window, color, screen_pos_tip, int(2 * zoom))
     pygame.draw.line(window, color, screen_pos_tip, screen_pos_end, int(2 * zoom))
     pygame.draw.polygon(window, color, tuple(arrow_points))
@@ -104,19 +104,22 @@ class GravityBody():
 # class Cannon
 class Cannon:
     def __init__(self, height: float, gravity_body: GravityBody, angle: float, firing_speed_modulus: float):
+        self.TAM: float = 20
         self.height: float = height
-        self.pos_base: np.ndarray = gravity_body.pos + np.array([0, gravity_body.diameter / 2], dtype=np.double)
-        self.pos: np.ndarray = self.pos_base + np.array([height * math.cos(math.radians(angle)), height * math.sin(math.radians(angle))], dtype=np.double)
+        self.pos_base: np.ndarray = gravity_body.pos + np.array([0, height], dtype=np.double) + np.array([0, gravity_body.diameter / 2], dtype=np.double)
+        self.pos: np.ndarray = self.pos_base + np.array([self.TAM * math.cos(math.radians(angle)) * 3, self.TAM * math.sin(math.radians(angle)) * 3], dtype=np.double)
         self.gravity_body: GravityBody = gravity_body
         self.angle: float = angle
         self.firing_speed_modulus: float = firing_speed_modulus
         self.firing_speed = np.array([firing_speed_modulus * math.cos(math.radians(self.angle)), firing_speed_modulus * math.sin(math.radians(self.angle))])
 
-    def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the cannon in screeen taking into account player movement and zoom
-        screen_pos_base: tuple = get_screen_pos(self.pos_base, screen_center, zoom) 
-        TAM: float = 20
 
-        pygame.draw.circle(window, (128, 128, 128), screen_pos_base, TAM * zoom)
+    def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the cannon in screeen taking into account player movement and zoom
+        screen_pos_gravity_body: tuple = get_screen_pos(self.gravity_body.pos, screen_center, zoom)
+        screen_pos_base: tuple = get_screen_pos(self.pos_base, screen_center, zoom) 
+        
+        pygame.draw.line(window, (139, 69, 19), screen_pos_gravity_body, screen_pos_base, int(8 * zoom))
+        pygame.draw.circle(window, (128, 128, 128), screen_pos_base, self.TAM * zoom, 0)
         draw_arrow(window, self.pos_base, self.pos, self.angle, self.firing_speed_modulus * 50, (0, 255, 0), screen_center, zoom)
 
     def add_height(self, height: float):
@@ -124,8 +127,8 @@ class Cannon:
         self.update_height()
     
     def update_height(self):
-        self.pos_base: np.ndarray = self.gravity_body.pos + np.array([0, self.gravity_body.diameter / 2], dtype=np.double)
-        self.pos: np.ndarray = self.pos_base + np.array([self.height * math.cos(math.radians(self.angle)), self.height * math.sin(math.radians(self.angle))], dtype=np.double)
+        self.pos_base: np.ndarray = self.gravity_body.pos + np.array([0, self.height], dtype=np.double) +np.array([0, self.gravity_body.diameter / 2], dtype=np.double)
+        self.pos: np.ndarray = self.pos_base + np.array([self.TAM * math.cos(math.radians(self.angle)) * 3, self.TAM * math.sin(math.radians(self.angle)) * 3], dtype=np.double)
 
     def add_angle(self, angle: float):
         self.angle += angle
