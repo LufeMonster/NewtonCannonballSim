@@ -25,18 +25,27 @@ def get_screen_pos(pos: np.ndarray, screen_center: np.ndarray, zoom: float):
     return tuple(screen_pos)
     
        
-def draw_arrow(window, start_pos: np.ndarray, angle: float, modulus: float, color: tuple, screen_center: np.ndarray, zoom: float):
-    end_pos: np.ndarray = start_pos + np.array([modulus * math.cos(math.radians(angle)), modulus * math.sin(math.radians(angle))], dtype=np.double)
-    screen_pos_start: tuple = get_screen_pos(start_pos, screen_center, zoom)
-    screen_pos_end: tuple = get_screen_pos(end_pos, screen_center, zoom)
-    
-    arrow_points: np.ndarray = ARROW_POLYGON_POINTS_ARRAY * zoom * 8
+def draw_arrow(window, pos_base: np.ndarray, pos_tip: np.ndarray, angle: float, modulus: float, color: tuple, screen_center: np.ndarray, zoom: float):
+    end_pos: np.ndarray = pos_tip + np.array([modulus * math.cos(math.radians(angle)), modulus * math.sin(math.radians(angle))], dtype=np.double)
     rotation_matrix: np.ndarray = np.array([(math.cos(math.radians(angle)), -math.sin(math.radians(angle))), (math.sin(math.radians(angle)), math.cos(math.radians(angle)))], dtype=np.double)
-    arrow_points @= rotation_matrix
-    arrow_points += screen_pos_end
+
+    screen_pos_base: tuple = get_screen_pos(pos_base, screen_center, zoom)
+    screen_pos_tip: tuple = get_screen_pos(pos_tip, screen_center, zoom)
+    screen_pos_end: tuple = get_screen_pos(end_pos, screen_center, zoom)
+
+    length = np.linalg.norm(np.array(screen_pos_tip) - np.array(screen_pos_base))
+    width = 20 * zoom 
+    cannon_points: np.ndarray = np.array([[0, -width/2], [length, -width/2], [length, width/2], [0, width/2]])
+    arrow_points: np.ndarray = ARROW_POLYGON_POINTS_ARRAY * zoom * 8
     
-    pygame.draw.circle(window, color, screen_pos_start, int(2 * zoom))
-    pygame.draw.line(window, color, screen_pos_start, screen_pos_end, int(2 * zoom))
+    cannon_points @= rotation_matrix
+    arrow_points @= rotation_matrix
+    cannon_points += screen_pos_base
+    arrow_points += screen_pos_end
+
+    pygame.draw.polygon(window, (128, 128, 128), cannon_points)
+    pygame.draw.circle(window, color, screen_pos_tip, int(2 * zoom))
+    pygame.draw.line(window, color, screen_pos_tip, screen_pos_end, int(2 * zoom))
     pygame.draw.polygon(window, color, tuple(arrow_points))
 
 # class Projectile
@@ -65,10 +74,7 @@ class Projectile:
 
 # class GravityBody
 class GravityBody():
-    def __init__(self, pos: np.ndarray, diameter: float, color: tuple):
-        super().__init__()
-        # self.original_image = pygame.image.load("planet_earth.png").convert_alpha()
-        
+    def __init__(self, pos: np.ndarray, diameter: float, color: tuple):        
         self.pos: np.ndarray = pos # creates a 1x2 array that stores the position of the gravity body
         self.diameter: float = diameter # diameter of the gravity body, expressed in m
         self.color: tuple = color
@@ -95,37 +101,36 @@ class GravityBody():
         distance_from_center_of_mass: np.double = np.linalg.norm(projectile.moment[0] - self.pos)
         return distance_from_center_of_mass <= self.diameter/2
        
-
 # class Cannon
 class Cannon:
     def __init__(self, height: float, gravity_body: GravityBody, angle: float, firing_speed_modulus: float):
         self.height: float = height
-        self.pos: np.ndarray = gravity_body.pos + np.array([0, height], dtype=np.double) + np.array([0, gravity_body.diameter / 2], dtype=np.double)
+        self.pos_base: np.ndarray = gravity_body.pos + np.array([0, gravity_body.diameter / 2], dtype=np.double)
+        self.pos: np.ndarray = self.pos_base + np.array([height * math.cos(math.radians(angle)), height * math.sin(math.radians(angle))], dtype=np.double)
         self.gravity_body: GravityBody = gravity_body
         self.angle: float = angle
         self.firing_speed_modulus: float = firing_speed_modulus
         self.firing_speed = np.array([firing_speed_modulus * math.cos(math.radians(self.angle)), firing_speed_modulus * math.sin(math.radians(self.angle))])
-        
+
     def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the cannon in screeen taking into account player movment and zoom
-        screen_pos_gravity_body: tuple = get_screen_pos(self.gravity_body.pos, screen_center, zoom)
-        screen_pos_cannon: tuple = get_screen_pos(self.pos, screen_center, zoom)
-        TAM: float = 16
-        
-        cannon_sprite: pygame.Rect = pygame.Rect(screen_pos_cannon[0] - TAM, screen_pos_cannon[1] - TAM, TAM * 2, TAM * 2)
-        pygame.draw.line(window, (0, 255, 0), screen_pos_gravity_body, screen_pos_cannon, int(8 * zoom))
-        pygame.draw.rect(window, (0, 255, 0), cannon_sprite.scale_by(zoom, zoom))
-        draw_arrow(window, self.pos, self.angle, self.firing_speed_modulus * 50, (255, 0, 255), screen_center, zoom)
-        
+        screen_pos_base: tuple = get_screen_pos(self.pos_base, screen_center, zoom) 
+        TAM: float = 20
+
+        pygame.draw.circle(window, (128, 128, 128), screen_pos_base, TAM * zoom)
+        draw_arrow(window, self.pos_base, self.pos, self.angle, self.firing_speed_modulus * 50, (0, 255, 0), screen_center, zoom)
+
     def add_height(self, height: float):
         self.height += height
         self.update_height()
     
     def update_height(self):
-        self.pos: np.ndarray = self.gravity_body.pos + np.array([0, self.height], dtype=np.double) + np.array([0, self.gravity_body.diameter / 2], dtype=np.double)
-    
+        self.pos_base: np.ndarray = self.gravity_body.pos + np.array([0, self.gravity_body.diameter / 2], dtype=np.double)
+        self.pos: np.ndarray = self.pos_base + np.array([self.height * math.cos(math.radians(self.angle)), self.height * math.sin(math.radians(self.angle))], dtype=np.double)
+
     def add_angle(self, angle: float):
         self.angle += angle
         self.firing_speed = np.array([self.firing_speed_modulus * math.cos(math.radians(self.angle)), self.firing_speed_modulus * math.sin(math.radians(self.angle))])
+        self.update_height()
         
     def add_speed_modulus(self, speed: float):
         self.firing_speed_modulus += speed
@@ -260,14 +265,14 @@ class Screen:
             planet.exerce_gravity(projectile)
             projectile.draw(self.window, self.screen_center, self.zoom)
         
-        cannon_display_txt = "angle: {angle:.2f}°, vel.: {speed:.2f} m/s, height: {height:.2f} m."
-        other_display_txt = "collisions: {count}, planet diameter {diameter:.1f} m."
+        cannon_display_txt = "Angle: {angle:.2f}°, Vel.: {speed:.2f} m/s, Height: {height:.2f} m."
+        other_display_txt = "Collisions: {count}, Planet diameter: {diameter:.1f} m."
         down_corner: int = self.resolution[1] - 4
         right_corner: int = self.resolution[0] - self.font_size * 14
         
-        self.text.render_to(self.window, (4, 4), "Cannon info.:", self.text_color)
+        self.text.render_to(self.window, (4, 4), "Cannon info:", self.text_color)
         self.text.render_to(self.window, (4, 4 + self.font_size), cannon_display_txt.format(angle = self.cannon.angle, speed = self.cannon.firing_speed_modulus, height = self.cannon.height), self.text_color)
-        self.text.render_to(self.window, (4, 4 + self.font_size * 2), "Other info.:", self.text_color)
+        self.text.render_to(self.window, (4, 4 + self.font_size * 2), "Other info:", self.text_color)
         self.text.render_to(self.window, (4, 4 + self.font_size * 3), other_display_txt.format(count = self.collision_count, diameter = self.planet.diameter), self.text_color)
     
         self.text.render_to(self.window, (4, down_corner - self.font_size * 2), "Last key pressed: " + last_key_pressed, self.text_color)
