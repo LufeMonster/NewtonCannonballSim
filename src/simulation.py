@@ -80,7 +80,7 @@ class GravityBody():
         self.color: tuple = color
         self.mass: float = (DENSITY * math.pi * (diameter ** 3)) / 6 # mass of the gravity body, expressed in Kg
         
-    def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the gravity body in screeen taking into account player movment and 
+    def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the gravity body in screeen taking into account player movement and zoom
         screen_pos: tuple = get_screen_pos(self.pos, screen_center, zoom)
         pygame.draw.circle(window, self.color, screen_pos, self.diameter/2 * zoom)
     
@@ -112,7 +112,7 @@ class Cannon:
         self.firing_speed_modulus: float = firing_speed_modulus
         self.firing_speed = np.array([firing_speed_modulus * math.cos(math.radians(self.angle)), firing_speed_modulus * math.sin(math.radians(self.angle))])
 
-    def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the cannon in screeen taking into account player movment and zoom
+    def draw(self, window, screen_center: np.ndarray, zoom: float): # draws the cannon in screeen taking into account player movement and zoom
         screen_pos_base: tuple = get_screen_pos(self.pos_base, screen_center, zoom) 
         TAM: float = 20
 
@@ -259,11 +259,12 @@ class Screen:
                 explosions.remove(explosion)
             explosion.draw(self.window, self.screen_center, self.zoom)
         
-        cannon.draw(self.window, self.screen_center, self.zoom)
-        planet.draw(self.window, self.screen_center, self.zoom)
         for projectile in projectiles:
             planet.exerce_gravity(projectile)
             projectile.draw(self.window, self.screen_center, self.zoom)
+
+        cannon.draw(self.window, self.screen_center, self.zoom)
+        planet.draw(self.window, self.screen_center, self.zoom)
         
         cannon_display_txt = "Angle: {angle:.2f}°, Vel.: {speed:.2f} m/s, Height: {height:.2f} m."
         other_display_txt = "Collisions: {count}, Planet diameter: {diameter:.1f} m."
